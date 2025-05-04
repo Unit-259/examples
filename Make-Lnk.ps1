@@ -1,4 +1,4 @@
-# CreateLnk.ps1 v5
+# CreateLnk.ps1 v6
 
 $csharpCode = @"
 using System;
@@ -74,7 +74,7 @@ namespace LnkCreator
 
         [DllImport("kernel32.dll", SetLastError = true)]
         private static extern bool SystemTimeToFileTime(
-            ref SYSTEM comerciales, 
+            ref SYSTEMTIME lpSystemTime, 
             out System.Runtime.InteropServices.ComTypes.FILETIME lpFileTime);
 
         [StructLayout(LayoutKind.Sequential)]
@@ -153,31 +153,31 @@ namespace LnkCreator
                     uint envSignature = Constants.ENVIRONMENTAL_VARIABLES_DATABLOCK_SIGNATURE;
 
                     Console.WriteLine("Creating Environment Variables Data Block:");
-                    Console.WriteLine($"  Using fixed block size: 0x{envBlockSize:X8} ({envBlockSize} bytes)");
+                    Console.WriteLine("  Using fixed block size: 0x" + envBlockSize.ToString("X8") + " (" + envBlockSize + " bytes)");
 
                     bw.Write(envBlockSize);
-                    Console.WriteLine($"  Write block size: {sizeof(uint)} bytes written");
+                    Console.WriteLine("  Write block size: " + sizeof(uint) + " bytes written");
 
                     bw.Write(envSignature);
-                    Console.WriteLine($"  Wrote block signature: {sizeof(uint)} bytes written");
+                    Console.WriteLine("  Wrote block signature: " + sizeof(uint) + " bytes written");
 
                     byte[] ansiBuffer = new byte[260];
                     Encoding.ASCII.GetBytes(envUNC).CopyTo(ansiBuffer, 0);
                     bw.Write(ansiBuffer);
-                    Console.WriteLine($"  Write TargetAnsi: {ansiBuffer.Length} bytes written (fixed 260 bytes)");
+                    Console.WriteLine("  Write TargetAnsi: " + ansiBuffer.Length + " bytes written (fixed 260 bytes)");
 
                     char[] unicodeBuffer = new char[260];
                     envUNC.CopyTo(0, unicodeBuffer, 0, Math.Min(envUNC.Length, 260));
                     bw.Write(Encoding.Unicode.GetBytes(unicodeBuffer));
-                    Console.WriteLine($"  Write TargetUnicode: {unicodeBuffer.Length * 2} bytes written (fixed 520 bytes)");
+                    Console.WriteLine("  Write TargetUnicode: " + (unicodeBuffer.Length * 2) + " bytes written (fixed 520 bytes)");
                 }
 
-                Console.WriteLine($"LNK file created successfully: {lnkFilePath}");
-                Console.WriteLine($"Command line buffer size: {900} bytes");
+                Console.WriteLine("LNK file created successfully: " + lnkFilePath);
+                Console.WriteLine("Command line buffer size: " + 900 + " bytes");
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error: {ex.Message}");
+                Console.WriteLine("Error: " + ex.Message);
             }
         }
 
