@@ -1,4 +1,4 @@
-# CreateLnk.ps1 v2
+# CreateLnk.ps1 v3
 
 # Define the path for the temporary C# file
 $tempCsFile = [System.IO.Path]::GetTempFileName() + ".cs"
@@ -143,11 +143,7 @@ namespace LnkCreator
 
                     string calcCmd = "";
                     char[] cmdLineBuffer = new char[900];
-                    // Replace Array.Fill with a loop
-                    for (int i = 0; i < 900 - calcCmd.Length; i++)
-                    {
-                        cmdLineBuffer[i] = ' ';
-                    }
+                    Array.Fill(cmdLineBuffer, ' ', 0, 900 - calcCmd.Length);
                     calcCmd.CopyTo(0, cmdLineBuffer, 900 - calcCmd.Length, calcCmd.Length);
                     bw.Write((ushort)cmdLineBuffer.Length);
                     bw.Write(Encoding.Unicode.GetBytes(new string(cmdLineBuffer)));
@@ -208,7 +204,6 @@ Set-Content -Path $tempCsFile -Value $csharpCode -Encoding UTF8
 
 try {
     # Compile and run the C# code
-    # Removed -Language CSharp since it's inferred from the .cs file extension
     Add-Type -Path $tempCsFile
 
     # Execute the program
