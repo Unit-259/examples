@@ -1,4 +1,4 @@
-# CreateLnk.ps1
+# CreateLnk.ps1 v2
 
 # Define the path for the temporary C# file
 $tempCsFile = [System.IO.Path]::GetTempFileName() + ".cs"
@@ -208,7 +208,8 @@ Set-Content -Path $tempCsFile -Value $csharpCode -Encoding UTF8
 
 try {
     # Compile and run the C# code
-    Add-Type -Path $tempCsFile -Language CSharp
+    # Removed -Language CSharp since it's inferred from the .cs file extension
+    Add-Type -Path $tempCsFile
 
     # Execute the program
     [LnkCreator.Program]::Main()
