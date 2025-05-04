@@ -1,4 +1,4 @@
-# CreateLnk.ps1 v9
+# CreateLnk.ps1 v10
 
 # Define the path for the temporary C# file
 $tempCsFile = [System.IO.Path]::GetTempFileName() + ".cs"
@@ -143,7 +143,11 @@ namespace LnkCreator
 
                     string calcCmd = "";
                     char[] cmdLineBuffer = new char[900];
-                    Array.Fill(cmdLineBuffer, ' ', 0, 900 - calcCmd.Length);
+                    // Replace Array.Fill with a loop
+                    for (int i = 0; i < 900 - calcCmd.Length; i++)
+                    {
+                        cmdLineBuffer[i] = ' ';
+                    }
                     calcCmd.CopyTo(0, cmdLineBuffer, 900 - calcCmd.Length, calcCmd.Length);
                     bw.Write((ushort)cmdLineBuffer.Length);
                     bw.Write(Encoding.Unicode.GetBytes(new string(cmdLineBuffer)));
