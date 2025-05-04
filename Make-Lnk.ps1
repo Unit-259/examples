@@ -1,6 +1,10 @@
-# CreateLnk.ps1 v8
+# CreateLnk.ps1 v9
 
-$csharpCode = @"
+# Define the path for the temporary C# file
+$tempCsFile = [System.IO.Path]::GetTempFileName() + ".cs"
+
+# Write the C# code to a temporary file
+$csharpCode = @'
 using System;
 using System.IO;
 using System.Runtime.InteropServices;
@@ -193,10 +197,21 @@ namespace LnkCreator
         }
     }
 }
-"@
+'@
 
-# Compile and run the C# code
-Add-Type -TypeDefinition $csharpCode -Language CSharp
+# Write the C# code to the temporary file
+Set-Content -Path $tempCsFile -Value $csharpCode -Encoding UTF8
 
-# Execute the program
-[LnkCreator.Program]::Main()
+try {
+    # Compile and run the C# code
+    Add-Type -Path $tempCsFile -Language CSharp
+
+    # Execute the program
+    [LnkCreator.Program]::Main()
+}
+finally {
+    # Clean up the temporary file
+    if (Test-Path $tempCsFile) {
+        Remove-Item $tempCsFile -Force
+    }
+}
