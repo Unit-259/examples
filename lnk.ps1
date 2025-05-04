@@ -1,4 +1,4 @@
-# CreateLnk.ps1 v3
+# CreateLnk.ps1 v4
 
 # Define the path for the temporary C# file
 $tempCsFile = [System.IO.Path]::GetTempFileName() + ".cs"
@@ -69,7 +69,7 @@ namespace LnkCreator
         public const uint FILE_ATTRIBUTE_NORMAL = 0x00000080;
     }
 
-    class Program
+    public class Program
     {
         [DllImport("kernel32.dll", SetLastError = true)]
         private static extern bool FileTimeToSystemTime(
@@ -203,11 +203,19 @@ namespace LnkCreator
 Set-Content -Path $tempCsFile -Value $csharpCode -Encoding UTF8
 
 try {
-    # Compile and run the C# code
-    Add-Type -Path $tempCsFile
+    # Compile the C# code and capture the assembly
+    $assembly = Add-Type -Path $tempCsFile -PassThru
 
-    # Execute the program
-    [LnkCreator.Program]::Main()
+    # Load the type from the assembly
+    $type = $assembly | Where-Object { $_.FullName -eq "LnkCreator.Program" }
+
+    if ($null -eq $type) {
+        throw "Could not find type LnkCreator.Program in the compiled assembly."
+    }
+
+    # Invoke the Main method
+    $method = $type.GetMethod("Main", [System.Reflection.BindingFlags]::Static -bor [System.Reflection.BindingFlags]::Public)
+    $method.Invoke($null, $null)
 }
 finally {
     # Clean up the temporary file
