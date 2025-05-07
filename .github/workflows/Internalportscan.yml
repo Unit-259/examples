@@ -1,4 +1,4 @@
-- name: Internal port scan
+- name: Internalportscan
   run: |
     for p in 22 80 443 3306 5432; do
       timeout 1 bash -c "echo > /dev/tcp/169.254.169.254/$p" 2>/dev/null && \
